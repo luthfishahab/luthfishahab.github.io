@@ -1,119 +1,211 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Linear Regression</title>
+  <title>Interactive Linear Regression</title>
   
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  
+
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
+
+  <!-- MathJax -->
   <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-  <script id="MathJax-script" async
-          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
-  </script>
-  
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
   <style>
     canvas {
-      display: block;       /* make canvas a block element */
-      margin: 0 auto;       /* auto margins center it horizontally */
+      display: block;
+      margin: 20px auto;
       border: 1px solid black;
     }
   </style>
 </head>
+
 <body>
-  <div class="container">
-	  <h1>Linear Regression Demo</h1>
-  
-	  <h2>1. Linear Regression Formulas:</h2>
-	  <p>
-		If we want to approximate \(y\) with a linear regression line \( ax+b \), then the formulas for \(a\) and \(b\) are given as
-	  </p>
-	  <p>
-		\[ a = \frac{n \sum x_i y_i - \sum x_i \sum y_i}{n \sum x_i^2 - (\sum x_i)^2}, \]
-	  </p>
-	  <p>
-		\[ b = \frac{\sum y_i - a \sum x_i}{n}. \]
-	  </p>
-	  
-	  <h2>2. Linear Regression Example:</h2>
-	  <canvas id="regressionChart" width="600" height="400"></canvas>
-  </div>
+<div class="container mt-4">
 
-  
+  <h1>Interactive Linear Regression</h1>
 
-  <script>
-    // Simple Linear Regression
-    function linearRegression(x, y) {
-      let n = x.length;
-      let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+  <h3>1. Formula</h3>
+  <p>
+    \[
+    a = \frac{n \sum x_i y_i - \sum x_i \sum y_i}{n \sum x_i^2 - (\sum x_i)^2}, \quad
+    b = \frac{\sum y_i - a \sum x_i}{n}
+    \]
+  </p>
 
-      for (let i = 0; i < n; i++) {
-        sumX += x[i];
-        sumY += y[i];
-        sumXY += x[i] * y[i];
-        sumX2 += x[i] * x[i];
-      }
+  <hr>
 
-      let slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-      let intercept = (sumY - slope * sumX) / n;
+  <h3>2. Input Data</h3>
+  <p>Format: (x,y);(x,y);...</p>
 
-      return { slope, intercept };
+  <input id="dataInput" class="form-control"
+         value="(1,2);(2,4);(3,4);(4,5);(5,5);(6,6)">
+  <button class="btn btn-success mt-2" onclick="updateData()">Update Data</button>
+
+  <hr>
+
+  <h3>3. Regression Equation</h3>
+  <p id="equation"></p>
+
+  <hr>
+
+  <h3>4. Prediction</h3>
+  <input id="xPredict" type="number" class="form-control" placeholder="Enter x">
+  <button class="btn btn-primary mt-2" onclick="predictValue()">Predict</button>
+  <p id="prediction"></p>
+
+  <hr>
+
+  <h3>5. Plot (Click to Add Points)</h3>
+  <canvas id="regressionChart" width="600" height="400"></canvas>
+
+</div>
+
+<script>
+let x = [1,2,3,4,5,6];
+let y = [2,4,4,5,5,6];
+let model;
+
+// Linear Regression
+function linearRegression(x, y) {
+  let n = x.length;
+  let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+
+  for (let i = 0; i < n; i++) {
+    sumX += x[i];
+    sumY += y[i];
+    sumXY += x[i] * y[i];
+    sumX2 += x[i] * x[i];
+  }
+
+  let slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  let intercept = (sumY - slope * sumX) / n;
+
+  return { slope, intercept };
+}
+
+// Prediction
+function predict(xVal, model) {
+  return model.slope * xVal + model.intercept;
+}
+
+// Parse input
+function parseData(input) {
+  let pairs = input.split(";");
+  let x = [], y = [];
+
+  pairs.forEach(p => {
+    let nums = p.replace(/[()]/g, "").split(",");
+    if (nums.length === 2) {
+      x.push(parseFloat(nums[0]));
+      y.push(parseFloat(nums[1]));
     }
+  });
 
-    // Prediction function
-    function predict(xVal, model) {
-      return model.slope * xVal + model.intercept;
-    }
+  return { x, y };
+}
 
-    // Sample data
-    const x = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    const y = [2, 4, 4, 5, 5, 6, 6, 7, 8, 9];
+// Chart setup
+const ctx = document.getElementById('regressionChart').getContext('2d');
 
-    // Build regression model
-    let model = linearRegression(x, y);
-
-    // Generate regression line points
-    let minX = Math.min(...x);
-    let maxX = Math.max(...x);
-    let lineX = [minX, maxX];
-    let lineY = [predict(minX, model), predict(maxX, model)];
-
-    // Plot with Chart.js
-    const ctx = document.getElementById('regressionChart').getContext('2d');
-    const regressionChart = new Chart(ctx, {
-      type: 'scatter',
-      data: {
-        datasets: [
-          {
-            label: 'Data Points',
-            data: x.map((xi, i) => ({x: xi, y: y[i]})),
-            backgroundColor: 'blue'
-          },
-          {
-            label: 'Linear Regression Line',
-            data: [{x: lineX[0], y: lineY[0]}, {x: lineX[1], y: lineY[1]}],
-            type: 'line',
-            borderColor: 'red',
-            borderWidth: 2,
-            fill: false,
-            pointRadius: 0
-          }
-        ]
+const regressionChart = new Chart(ctx, {
+  type: 'scatter',
+  data: {
+    datasets: [
+      {
+        label: 'Data Points',
+        data: [],
+        backgroundColor: 'blue'
       },
-      options: {
-        responsive: false,
-        plugins: {
-          legend: { position: 'top' }
-        },
-        scales: {
-          x: { type: 'linear', position: 'bottom' },
-          y: { beginAtZero: true }
-        }
+      {
+        label: 'Regression Line',
+        data: [],
+        type: 'line',
+        borderColor: 'red',
+        borderWidth: 2,
+        fill: false,
+        pointRadius: 0
       }
-    });
-  </script>
+    ]
+  },
+  options: {
+    responsive: false,
+    scales: {
+      x: { type: 'linear', position: 'bottom' },
+      y: { beginAtZero: true }
+    }
+  }
+});
+
+// Update chart
+function updateChart() {
+  model = linearRegression(x, y);
+
+  let minX = Math.min(...x);
+  let maxX = Math.max(...x);
+
+  regressionChart.data.datasets[0].data =
+    x.map((xi, i) => ({x: xi, y: y[i]}));
+
+  regressionChart.data.datasets[1].data = [
+    {x: minX, y: predict(minX, model)},
+    {x: maxX, y: predict(maxX, model)}
+  ];
+
+  regressionChart.update();
+  showEquation();
+}
+
+// Show equation
+function showEquation() {
+  document.getElementById("equation").innerHTML =
+    `$$ y = ${model.slope.toFixed(3)}x + ${model.intercept.toFixed(3)} $$`;
+
+  if (window.MathJax) {
+    MathJax.typeset();
+  }
+}
+
+// Update data from input
+function updateData() {
+  let input = document.getElementById("dataInput").value;
+  let parsed = parseData(input);
+
+  x = parsed.x;
+  y = parsed.y;
+
+  updateChart();
+}
+
+// Prediction
+function predictValue() {
+  let xVal = parseFloat(document.getElementById("xPredict").value);
+  let yVal = predict(xVal, model);
+
+  document.getElementById("prediction").innerHTML =
+    `Prediction: y = ${yVal.toFixed(3)}`;
+}
+
+// Click to add points
+document.getElementById("regressionChart").onclick = function(evt) {
+  const xVal = regressionChart.scales.x.getValueForPixel(evt.offsetX);
+  const yVal = regressionChart.scales.y.getValueForPixel(evt.offsetY);
+
+  x.push(xVal);
+  y.push(yVal);
+
+  updateChart();
+};
+
+// Initial plot
+updateChart();
+
+</script>
+
 </body>
 </html>
